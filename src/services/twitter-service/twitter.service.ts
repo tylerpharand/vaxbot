@@ -326,8 +326,6 @@ export class TwitterService {
       const existingPostalCodes = subscriptions.map(subscription => subscription.postalCode)
       const newPostalCodes = postalCodes.filter(postalCode => !existingPostalCodes.includes(postalCode))
 
-      console.log('\n\nnewPostalCodes')
-      console.log(newPostalCodes)
       return await Promise.all(
         newPostalCodes.map(postalCode => limit(
           async () => getRepository(Subscription)
