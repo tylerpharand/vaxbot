@@ -39,7 +39,8 @@
       "esModuleInterop": true,
       "allowSyntheticDefaultImports": true,
       "emitDecoratorMetadata": true,
-      "experimentalDecorators": true
+      "experimentalDecorators": true,
+      "skipLibCheck": true
    },
    // The folder or files you want to exclude
    // You can also use regex `**/*.spec.ts` for ex

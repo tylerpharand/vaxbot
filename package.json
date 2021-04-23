@@ -1,7 +1,8 @@
 {
    "name": "vaxbot",
    "version": "0.0.1",
-   "description": "Awesome project developed with TypeORM.",
+   "description": "Beep boop",
+   "license": "UNLICENSED",
    "devDependencies": {
       "@types/cron": "^1.7.2",
       "@types/lodash": "^4.14.168",
@@ -22,6 +23,9 @@
    },
    "scripts": {
       "dev": "ts-node src/index.ts",
-      "prod": "ts-node -F src/index.ts"
+      "prod": "ts-node -F src/index.ts",
+      "clean-build-dir": "rm -r ./build && mkdir ./build",
+      "build-dev": "yarn clean-build-dir && cp .env ./build/.env && tsc",
+      "build-prod": "yarn clean-build-dir && cp .env ./build/.env && tsc"
    }
 }
