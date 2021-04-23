@@ -1,0 +1,16 @@
+{
+   "compilerOptions": {
+      "lib": [
+         "es2020.string",
+         "es5",
+         "es6"
+      ],
+      "target": "es2019",
+      "module": "commonjs",
+      "moduleResolution": "node",
+      "outDir": "./build",
+      "emitDecoratorMetadata": true,
+      "experimentalDecorators": true,
+      "sourceMap": true
+   }
+}
