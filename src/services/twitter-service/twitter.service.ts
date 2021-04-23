@@ -1,8 +1,6 @@
 /**
   Remaining items:
-  - [] Add cron job for checking mentions (subscription updates)
   - [] Unsubscribe via DM (With confirmation)
-  - [] Add back logic to fetch/use cursor
   - [] Point towards @VaxHuntersCan
   - [] Dockerize
   - [] Deploy to EC2
@@ -57,19 +55,37 @@ export class TwitterService {
     this.stream.on('tweet', async (tweet: Tweet) => {
       this.handleTweet(tweet)
     })
-    // this.checkMentions()
+  }
+
+  public async checkMentions() {
+    try {
+      const mentionsCursor = await getRepository(MentionsCursor).findOne({ name: MENTIONS_CURSOR_NAME })
+
+      const args = {
+        count: MENTIONS_FETCH_COUNT,
+      }
+
+      if (mentionsCursor && mentionsCursor.cursor) {
+        Object.assign(args, { since_id: mentionsCursor.cursor })
+      }
+
+      const res = await T.get(`statuses/mentions_timeline`, args)
+      const mentions = res.data as unknown as Tweet[]
+      await this.processMentions(mentions)
+      await this.sendConfirmations()
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   private async handleTweet(tweet: Tweet) {
-    if (tweet.user.id_str === VAX_HUNTERS_CAN_ID || true) {
+    if (tweet.user.id_str === VAX_HUNTERS_CAN_ID) {
       console.log('Received tweet: %o', tweet.text)
       const cleanedText = tweet.text.replace(/http\S+/, '')
-      // TODO(tyler): Verify this new logic works...
-      // const postalCodes = _.chain([...(cleanedText as any).matchAll(POSTAL_CODE_REGEX)])
-      //     .map((match) => match[0].toUpperCase())
-      //     .uniq()
-      //     .value()
-      const postalCodes = _.uniq(['M5V'])
+      const postalCodes = _.chain([...(cleanedText as any).matchAll(POSTAL_CODE_REGEX)])
+          .map((match) => match[0].toUpperCase())
+          .uniq()
+          .value()
 
       if (postalCodes.length > 0) {
         console.log('Matched postal codes: %o', postalCodes)
@@ -85,9 +101,8 @@ export class TwitterService {
         const limit = pLimit(NOTIFY_USER_CONCURRENCY)
         await Promise.all(users.map(user => limit(async () => {
           await this.notifyUser(user.userId, postalCodes, tweet)
+            .catch((err) => console.error(`An error occurred while notifying user ${user.userId}: %o`, err))
         })))
-
-        // TODO(tyler): Send DIRECT MESSAGES of notifications rather than tagging...
       }
     }
   }
@@ -112,63 +127,43 @@ export class TwitterService {
     }
   }
 
-  private async checkMentions() {
-    try {
-      // TODO(tyler): Remove `&& null` after debugging
-      const mentionsCursor = await getRepository(MentionsCursor).findOne({ name: MENTIONS_CURSOR_NAME }) && null
-
-      const args = {
-        count: MENTIONS_FETCH_COUNT,
-      }
-
-      if (mentionsCursor && mentionsCursor.cursor) {
-        Object.assign(args, { since_id: mentionsCursor.cursor })
-      }
-
-      const res = await T.get(`statuses/mentions_timeline`, args)
-      const mentions = res.data as unknown as Tweet[]
-      await this.processMentions(mentions)
-      // await this.sendConfirmations()
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
   private async processMentions(mentions: Tweet[]) {
-    console.log(`Processing ${mentions.length} mentions...`)
-
     // Do nothing
     if (mentions.length === 0) {
+      console.log(`No pending mentions`)
       return
     }
 
     // Process pending mentions
+    console.log(`Processing ${mentions.length} mentions...`)
     mentions.reverse()
     const limit = pLimit(PROCESS_MENTIONS_CONCURRENCY)
     await Promise.all(mentions.map(tweet => limit(async () => {
-      console.log(`\nProcessing mention (${tweet.id_str}): %o`, tweet.text)
-      const cleanedText = tweet.text.replace(/http\S+/, '')
-      // TODO(tyler): Verify this new logic works...
-      const postalCodes = _.chain([...(cleanedText as any).matchAll(POSTAL_CODE_REGEX)])
+      try {
+        console.log(`\nProcessing mention (${tweet.id_str}): %o`, tweet.text)
+        const cleanedText = tweet.text.replace(/http\S+/, '')
+        const postalCodes = _.chain([...(cleanedText as any).matchAll(POSTAL_CODE_REGEX)])
           .map((match) => match[0].toUpperCase())
           .uniq()
           .value()
 
-      if (UNSUBSCRIBE_REGEX.test(cleanedText)) {
-        await this.unsubscribeUser(tweet.user.id_str)
-      } else if (postalCodes.length > 0) {
-        await this.subscribeUser(tweet.user.id_str, tweet.user.screen_name, tweet.id_str, postalCodes)
+        if (UNSUBSCRIBE_REGEX.test(cleanedText)) {
+          await this.unsubscribeUser(tweet.user.id_str)
+        } else if (postalCodes.length > 0) {
+          await this.subscribeUser(tweet.user.id_str, tweet.user.screen_name, tweet.id_str, postalCodes)
+        }
+      } catch (err) {
+        console.error(`An error occurred while handling a subscription change: %o`, err)
       }
     })))
 
+    // Update cursor in db...
     const cursor = mentions[mentions.length - 1].id_str
+    console.log(`\nUpdating cursor to ${cursor}`)
     await getRepository(MentionsCursor).save({
       name: MENTIONS_CURSOR_NAME,
       cursor,
     })
-
-    // Update cursor in db...
-    console.log(`\nUpdated cursor to ${cursor}`)
   }
 
   private async unsubscribeUser(userId: string) {
@@ -199,6 +194,9 @@ export class TwitterService {
             tweetId,
             confirmed: false,
           })
+          .catch((err) => {
+            console.error(`An error occurred while subscribing user ${userId} to their postal codes ${postalCodes.toString()}: %o`, err)
+          })
         ))
       )
     } catch (err) {
@@ -215,10 +213,12 @@ export class TwitterService {
       .getMany()
 
     await Promise.all(toConfirm.map(({ id, tweetId, username }) => limit(async () => {
-      await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Got it! I will DM you if @VaxHuntersCan tweets about your postal code.` })
-      await getRepository(Subscription).update(id, { confirmed: true })
-    }))).catch(err => {
-      console.error('An error occurred while sending confirmations: %o', err)
-    })
+      try {
+        await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Got it! I will DM you if @VaxHuntersCan mentions your postal code.` })
+        await getRepository(Subscription).update(id, { confirmed: true })
+      } catch (err) {
+        console.error('An error occurred while sending confirmations: %o', err)
+      }
+    })))
   }
 }
