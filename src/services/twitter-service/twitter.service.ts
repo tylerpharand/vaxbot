@@ -1,5 +1,7 @@
 /**
   Remaining items:
+  - [] nice-to-have: Automatic followbacks.
+  - [] DM scalability beyond limits...
   - [] Dockerize
   - [] Deploy to EC2
   - [] Make sure you add UUID to remote postgres
@@ -9,9 +11,9 @@
   - Only problem would be that we can potentially miss tweets from @VaxHuntersCan during downtime...
 */
 
-import * as _ from 'lodash'
-import * as Twit from 'twit'
-import * as pLimit from 'p-limit'
+import _ from 'lodash'
+import Twit from 'twit'
+import pLimit from 'p-limit'
 import { Tweet } from './types/index'
 import { getRepository, In } from 'typeorm'
 import { Subscription } from '../../entity/Subscription'
@@ -364,7 +366,7 @@ export class TwitterService {
     await Promise.all(toConfirm.map(({ id, tweetId, username }) => limit(async () => {
       try {
         if (SUBSCRIPTION_CONFIRMATIONS_ACTIVE) {
-          await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Got it! I'll DM you if @VaxHuntersCan mentions your postal code.\nReply 'unsubscribe' to stop.` })
+          await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Got it! I'll DM you if @VaxHuntersCan mentions your postal code.\n\nReply 'unsubscribe' to stop.` })
         }
         await getRepository(Subscription)
           .createQueryBuilder()
