@@ -1,5 +1,11 @@
 
 export const config = {
+  // Options
+  // TODO(tyler): Turn this on when you're ready...
+  SELF_PROMOTE_ACTIVE: false,
+  NOTIFY_USERS_ACTIVE: true,
+  SUBSCRIPTION_CONFIRMATIONS_ACTIVE: true,
+
   // Credentials
   TWITTER_CONSUMER_KEY: process.env.TWITTER_CONSUMER_KEY,
   TWITTER_CONSUMER_SECRET: process.env.TWITTER_CONSUMER_SECRET,
@@ -28,6 +34,10 @@ export const config = {
   MENTIONS_CURSOR_NAME: 'root',
   MENTIONS_POLL_INTERVAL_SECONDS: 30,
 
+  DM_FETCH_COUNT: 50,
+  DM_CURSOR_NAME: 'dm_cursor',
+  DMS_POLL_INTERVAL_MINUTES: 1,
+
   // Blurbs
-  SELF_PROMOTION_BLURB: `I'm a bot. Tweet me your postal code and I'll notify you if @VaxHuntersCan mentions it!`,
+  SELF_PROMOTION_BLURB: `I'm a bot. Tweet me your postal code and I'll notify you if VaxHuntersCan mentions it!`,
 }

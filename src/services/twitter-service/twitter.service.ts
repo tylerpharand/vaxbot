@@ -1,7 +1,5 @@
 /**
   Remaining items:
-  - [] Unsubscribe via DM (With confirmation)
-  - [] Subscribe via DM (With confirmation)
   - [] Dockerize
   - [] Deploy to EC2
   - [] Make sure you add UUID to remote postgres
@@ -21,6 +19,9 @@ import { MentionsCursor } from '../../entity/MentionsCursor'
 import { config } from '../../config'
 
 const {
+  SELF_PROMOTE_ACTIVE,
+  NOTIFY_USERS_ACTIVE,
+  SUBSCRIPTION_CONFIRMATIONS_ACTIVE,
   VAX_HUNTERS_CAN_ID,
   VAX_HUNTERS_CAN_USERNAME,
   POSTAL_CODE_REGEX,
@@ -30,12 +31,14 @@ const {
   PROCESS_MENTIONS_CONCURRENCY,
   SUBSCRIPTION_CONFIRMATION_CONCURRENCY,
   MENTIONS_FETCH_COUNT,
+  DM_FETCH_COUNT,
   MENTIONS_CURSOR_NAME,
   TWITTER_CONSUMER_KEY,
   TWITTER_CONSUMER_SECRET,
   TWITTER_ACCESS_TOKEN,
   TWITTER_ACCESS_TOKEN_SECRET,
   SELF_PROMOTION_BLURB,
+  VAX_BOT_ID,
 } = config
 
 var T = new Twit({
@@ -83,13 +86,48 @@ export class TwitterService {
       const remainingCalls = res.resp.headers['x-rate-limit-remaining']
       const remainingSeconds = parseInt(res.resp.headers['x-rate-limit-reset'] as string, 10) - Math.floor(new Date().getTime() / 1000)
       const remainingMinutes = Number.parseFloat(String(remainingSeconds / 60)).toFixed(2)
-      console.log(`Remaining calls: ${remainingCalls} - More juice in ${remainingMinutes} mins`)
+      console.log(`(Mentions) Remaining calls: ${remainingCalls} - More juice in ${remainingMinutes} mins`)
       
       const mentions = res.data as unknown as Tweet[]
+      mentions.reverse()
       await this.handleMentions(mentions)
       await this.sendSubscriptionConfirmations()
     } catch (err) {
       console.error(`An error occurred while checking mentions: %o`, err)
+    }
+  }
+
+  public async checkDMs() {
+    try {
+      const directMessageCursor = '' || { cursor: ''}
+      const args = {
+        count: DM_FETCH_COUNT,
+      }
+
+      if (directMessageCursor && directMessageCursor.cursor) {
+        Object.assign(args, { since_id: directMessageCursor.cursor })
+      }
+
+      const res = await T.get(`direct_messages/events/list`, args)
+      const remainingCalls = res.resp.headers['x-rate-limit-remaining']
+      const remainingSeconds = parseInt(res.resp.headers['x-rate-limit-reset'] as string, 10) - Math.floor(new Date().getTime() / 1000)
+      const remainingMinutes = Number.parseFloat(String(remainingSeconds / 60)).toFixed(2)
+      console.log(`(DMs) Remaining calls: ${remainingCalls} - More juice in ${remainingMinutes} mins`)
+
+      const directMessages = (res.data as any).events as unknown as any[]
+      directMessages.reverse()
+      console.log(`DMS: ${directMessages.length}`)
+      const filteredDms = directMessages.filter(directMessage => {
+        return (
+          directMessage.type === 'message_create'
+          && directMessage.message_create.sender_id !== VAX_BOT_ID
+        )
+      })
+      // TODO(tyler): Future improvement
+      // handleDMs(filteredDms)
+
+    } catch (err) {
+      console.error(`An error occurred while checking DMs: %o`, err)
     }
   }
 
@@ -130,9 +168,10 @@ export class TwitterService {
           await this.notifyUser(user.userId, postalCodes, tweet)
             .catch((err) => console.error(`An error occurred while notifying user ${user.userId}: %o`, err))
         })))
-
-        await this.selfPromote(tweet)
       }
+
+      // Self promote on all tweets
+      await this.selfPromote(tweet)
     }
   }
 
@@ -147,7 +186,9 @@ export class TwitterService {
     tweet: Tweet,
   ) {
     try {
-      await T.post('statuses/update', { in_reply_to_status_id: tweet.id_str, status: SELF_PROMOTION_BLURB })
+      if (SELF_PROMOTE_ACTIVE && tweet.user.id_str === VAX_HUNTERS_CAN_ID) {
+        await T.post('statuses/update', { in_reply_to_status_id: tweet.id_str, status: SELF_PROMOTION_BLURB })
+      }
     } catch (err) {
       console.error(`An error occurred during self promotion: %o`, err)
     }
@@ -169,19 +210,21 @@ export class TwitterService {
     tweet: Tweet
   ) {
     try {
-      await T.post('direct_messages/events/new', {
-        event: {
-          type: "message_create",
-          message_create: {
-            target: {
-              recipient_id: userId,
-            },
-            message_data: {
-              text: `Hey! @${VAX_HUNTERS_CAN_USERNAME} just tweeted about ${postalCodes.join(', ')}:\nhttps://twitter.com/i/web/status/${tweet.id_str}`
+      if (NOTIFY_USERS_ACTIVE) {
+        await T.post('direct_messages/events/new', {
+          event: {
+            type: "message_create",
+            message_create: {
+              target: {
+                recipient_id: userId,
+              },
+              message_data: {
+                text: `Hey! @${VAX_HUNTERS_CAN_USERNAME} just tweeted about ${postalCodes.join(', ')}:\nhttps://twitter.com/i/web/status/${tweet.id_str}\n\nTo unsubscribe, mention me in a tweet with the word 'unsubscribe'.`
+              }
             }
           }
-        }
-      } as any)
+        } as any)
+      }
     } catch (err) {
       console.error(`An error occurred while notifying user ${userId}: %o`, err)
     }
@@ -206,7 +249,6 @@ export class TwitterService {
 
     // Process pending mentions
     console.log(`Processing ${mentions.length} mentions...`)
-    mentions.reverse()
     const limit = pLimit(PROCESS_MENTIONS_CONCURRENCY)
     await Promise.all(mentions.map(tweet => limit(async () => {
       try {
@@ -216,6 +258,9 @@ export class TwitterService {
           .map((match) => match[0].toUpperCase())
           .uniq()
           .value()
+
+        // Ignore tweets from @VaxHunterBot
+        if (tweet.user.id_str === VAX_BOT_ID) return
 
         if (UNSUBSCRIBE_REGEX.test(cleanedText)) {
           await this.unsubscribeUser(tweet.user.id_str, tweet.id_str, tweet.user.screen_name)
@@ -320,7 +365,9 @@ export class TwitterService {
 
     await Promise.all(toConfirm.map(({ id, tweetId, username }) => limit(async () => {
       try {
-        await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Got it! I'll DM you if @VaxHuntersCan mentions your postal code.\nReply 'unsubscribe' to stop.` })
+        if (SUBSCRIPTION_CONFIRMATIONS_ACTIVE) {
+          await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Got it! I'll DM you if @VaxHuntersCan mentions your postal code.\nReply 'unsubscribe' to stop.` })
+        }
         await getRepository(Subscription)
           .createQueryBuilder()
           .update()
