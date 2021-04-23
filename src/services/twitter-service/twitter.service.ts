@@ -57,9 +57,17 @@ export class TwitterService {
     })
   }
 
+
+  /**
+   * 
+   * Checks for new mentions and creates/deletes subscriptions as necessary. Additionally,
+   * sends confirmations for subscriptions which haven't been acknowledged.
+   * 
+   */
   public async checkMentions() {
     try {
-      const mentionsCursor = await getRepository(MentionsCursor).findOne({ name: MENTIONS_CURSOR_NAME })
+      const mentionsCursor = await getRepository(MentionsCursor)
+        .findOne({ name: MENTIONS_CURSOR_NAME })
 
       const args = {
         count: MENTIONS_FETCH_COUNT,
@@ -70,17 +78,34 @@ export class TwitterService {
       }
 
       const res = await T.get(`statuses/mentions_timeline`, args)
+      const remainingCalls = res.resp.headers['x-rate-limit-remaining']
+      const remainingSeconds = parseInt(res.resp.headers['x-rate-limit-reset'] as string, 10) - Math.floor(new Date().getTime() / 1000)
+      const remainingMinutes = Number.parseFloat(String(remainingSeconds / 60)).toFixed(2)
+      console.log(`Remaining calls: ${remainingCalls} - More juice in ${remainingMinutes} mins`)
+      
       const mentions = res.data as unknown as Tweet[]
-      await this.processMentions(mentions)
-      await this.sendConfirmations()
+      await this.handleMentions(mentions)
+      await this.sendSubscriptionConfirmations()
     } catch (err) {
-      console.error(err)
+      console.error(`An error occurred while checking mentions: %o`, err)
     }
   }
 
-  private async handleTweet(tweet: Tweet) {
+
+  /**
+   * 
+   * Handles new tweets which are posted by @VaxHuntersCan and determines if they
+   * have mentioned any postal codes. Notifies any users which are subscribed to
+   * postal codes which were mentioned.
+   * 
+   * @param tweet 
+   */
+  private async handleTweet(
+    tweet: Tweet
+  ) {
     if (tweet.user.id_str === VAX_HUNTERS_CAN_ID) {
-      console.log('Received tweet: %o', tweet.text)
+      console.log('\nReceived tweet: %o', tweet.text)
+      console.log(tweet)
       const cleanedText = tweet.text.replace(/http\S+/, '')
       const postalCodes = _.chain([...(cleanedText as any).matchAll(POSTAL_CODE_REGEX)])
           .map((match) => match[0].toUpperCase())
@@ -107,7 +132,21 @@ export class TwitterService {
     }
   }
 
-  private async notifyUser(userId: string, postalCodes: string[], tweet: Tweet) {
+
+  /**
+   * 
+   * Notifies users when @VaxHuntersCan posts a tweet which mentions a
+   * postal code they are subscribed to.
+   * 
+   * @param userId 
+   * @param postalCodes 
+   * @param tweet 
+   */
+  private async notifyUser(
+    userId: string,
+    postalCodes: string[],
+    tweet: Tweet
+  ) {
     try {
       await T.post('direct_messages/events/new', {
         event: {
@@ -127,7 +166,17 @@ export class TwitterService {
     }
   }
 
-  private async processMentions(mentions: Tweet[]) {
+
+  /**
+   * 
+   * Checks for any new mentions, classifies the mentions as either a subscribe,
+   * unsubscribe or neither, then updates subscriptions in database accordingly.
+   * 
+   * @param mentions 
+   */
+  private async handleMentions(
+    mentions: Tweet[]
+  ) {
     // Do nothing
     if (mentions.length === 0) {
       console.log(`No pending mentions`)
@@ -166,7 +215,18 @@ export class TwitterService {
     })
   }
 
-  private async unsubscribeUser(userId: string) {
+
+  /**
+   * 
+   * Unsubscribes users from all subscriptions. This can be initiated either from
+   * a mention a or Direct Message.
+   * 
+   * @param userId 
+   * @returns 
+   */
+  private async unsubscribeUser(
+    userId: string
+  ) {
     try {
       console.log(`\tUnsubscribing user ${userId}...`)
       return await getRepository(Subscription).delete({ userId })
@@ -175,6 +235,15 @@ export class TwitterService {
     }
   }
 
+
+  /**
+   *
+   * Creates subscriptions for a user to the specified postal codes. This can be
+   * initiated from a mention.
+   *
+   * @param userId
+   * @returns
+   */
   private async subscribeUser(userId: string, username: string, tweetId: string, postalCodes: string[]) {
     try {
       console.log(`\tSubscribing user ${userId} to postal codes ${postalCodes.join(', ')}...`)
@@ -204,7 +273,14 @@ export class TwitterService {
     }
   }
 
-  private async sendConfirmations() {
+
+  /**
+   * 
+   * Go through database and send confirmations for subscriptions which haven't
+   * yet been confirmed.
+   * 
+   */
+  private async sendSubscriptionConfirmations() {
     const limit = pLimit(SUBSCRIPTION_CONFIRMATION_CONCURRENCY)
     const toConfirm = await getRepository(Subscription)
       .createQueryBuilder('subscription')
