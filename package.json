@@ -3,14 +3,6 @@
    "version": "0.0.1",
    "description": "Beep boop",
    "license": "UNLICENSED",
-   "devDependencies": {
-      "@types/cron": "^1.7.2",
-      "@types/lodash": "^4.14.168",
-      "@types/node": "^8.0.29",
-      "@types/twit": "^2.2.28",
-      "ts-node": "3.3.0",
-      "typescript": "3.5.3"
-   },
    "dependencies": {
       "cron": "^1.8.2",
       "dotenv": "^8.2.0",
@@ -20,6 +12,14 @@
       "reflect-metadata": "^0.1.10",
       "twit": "^2.2.11",
       "typeorm": "0.2.32"
+   },
+   "devDependencies": {
+      "@types/cron": "^1.7.2",
+      "@types/lodash": "^4.14.168",
+      "@types/node": "^8.0.29",
+      "@types/twit": "^2.2.28",
+      "ts-node": "3.3.0",
+      "typescript": "^4.2.4"
    },
    "scripts": {
       "dev": "ts-node src/index.ts",
