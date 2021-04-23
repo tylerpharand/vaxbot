@@ -1,7 +1,7 @@
 /**
   Remaining items:
   - [] Unsubscribe via DM (With confirmation)
-  - [] Point towards @VaxHuntersCan
+  - [] Subscribe via DM (With confirmation)
   - [] Dockerize
   - [] Deploy to EC2
   - [] Make sure you add UUID to remote postgres
@@ -35,6 +35,7 @@ const {
   TWITTER_CONSUMER_SECRET,
   TWITTER_ACCESS_TOKEN,
   TWITTER_ACCESS_TOKEN_SECRET,
+  SELF_PROMOTION_BLURB,
 } = config
 
 var T = new Twit({
@@ -51,6 +52,7 @@ export class TwitterService {
 
   constructor() {
     this.stream = T.stream('statuses/filter', { follow: [VAX_HUNTERS_CAN_ID] })
+    console.log(`Listening for tweet updates from user ${VAX_HUNTERS_CAN_ID}`)
 
     this.stream.on('tweet', async (tweet: Tweet) => {
       this.handleTweet(tweet)
@@ -103,9 +105,9 @@ export class TwitterService {
   private async handleTweet(
     tweet: Tweet
   ) {
-    if (tweet.user.id_str === VAX_HUNTERS_CAN_ID) {
+    // TODO(tyler): Remove `|| true` when ready.
+    if ((tweet.user.id_str === VAX_HUNTERS_CAN_ID || true) && tweet.in_reply_to_user_id_str === null) {
       console.log('\nReceived tweet: %o', tweet.text)
-      console.log(tweet)
       const cleanedText = tweet.text.replace(/http\S+/, '')
       const postalCodes = _.chain([...(cleanedText as any).matchAll(POSTAL_CODE_REGEX)])
           .map((match) => match[0].toUpperCase())
@@ -122,13 +124,32 @@ export class TwitterService {
           })
         const users = _.uniqBy(subscriptions, 'userId')
 
-        console.log(`Notifying ${users.length} users: %o`, users)
+        console.log(`Notifying ${users.length} users...`)
         const limit = pLimit(NOTIFY_USER_CONCURRENCY)
         await Promise.all(users.map(user => limit(async () => {
           await this.notifyUser(user.userId, postalCodes, tweet)
             .catch((err) => console.error(`An error occurred while notifying user ${user.userId}: %o`, err))
         })))
+
+        await this.selfPromote(tweet)
       }
+    }
+  }
+
+
+  /**
+   * 
+   * For @VaxHuntersCan tweets that contain postal codes, automatically post self promo
+   * 
+   * @param tweet 
+   */
+  private async selfPromote(
+    tweet: Tweet,
+  ) {
+    try {
+      await T.post('statuses/update', { in_reply_to_status_id: tweet.id_str, status: SELF_PROMOTION_BLURB })
+    } catch (err) {
+      console.error(`An error occurred during self promotion: %o`, err)
     }
   }
 
@@ -156,7 +177,7 @@ export class TwitterService {
               recipient_id: userId,
             },
             message_data: {
-              text: `Hey! @${VAX_HUNTERS_CAN_USERNAME} just tweeted about ${postalCodes.join(', ')}:\nhttps://twitter.com/i/web/status/${tweet.id_str}.\n\nReply 'unsubscribe' to stop recieving alerts.`
+              text: `Hey! @${VAX_HUNTERS_CAN_USERNAME} just tweeted about ${postalCodes.join(', ')}:\nhttps://twitter.com/i/web/status/${tweet.id_str}`
             }
           }
         }
@@ -197,7 +218,7 @@ export class TwitterService {
           .value()
 
         if (UNSUBSCRIBE_REGEX.test(cleanedText)) {
-          await this.unsubscribeUser(tweet.user.id_str)
+          await this.unsubscribeUser(tweet.user.id_str, tweet.id_str, tweet.user.screen_name)
         } else if (postalCodes.length > 0) {
           await this.subscribeUser(tweet.user.id_str, tweet.user.screen_name, tweet.id_str, postalCodes)
         }
@@ -225,11 +246,14 @@ export class TwitterService {
    * @returns 
    */
   private async unsubscribeUser(
-    userId: string
+    userId: string,
+    tweetId: string,
+    username: string,
   ) {
     try {
       console.log(`\tUnsubscribing user ${userId}...`)
-      return await getRepository(Subscription).delete({ userId })
+      await getRepository(Subscription).delete({ userId })
+      await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Consider it done.` })
     } catch (err) {
       console.error(`An error occurred while unsubscribing user ${userId}: %o`, err)
     }
@@ -244,7 +268,12 @@ export class TwitterService {
    * @param userId
    * @returns
    */
-  private async subscribeUser(userId: string, username: string, tweetId: string, postalCodes: string[]) {
+  private async subscribeUser(
+    userId: string,
+    username: string,
+    tweetId: string,
+    postalCodes: string[]
+  ) {
     try {
       console.log(`\tSubscribing user ${userId} to postal codes ${postalCodes.join(', ')}...`)
       const limit = pLimit(SUBSCRIBE_USER_TO_POSTAL_CODES_CONCURRENCY)
@@ -256,7 +285,8 @@ export class TwitterService {
       console.log(newPostalCodes)
       return await Promise.all(
         newPostalCodes.map(postalCode => limit(
-          async () => getRepository(Subscription).save({
+          async () => getRepository(Subscription)
+          .save({
             userId,
             username,
             postalCode,
@@ -290,8 +320,13 @@ export class TwitterService {
 
     await Promise.all(toConfirm.map(({ id, tweetId, username }) => limit(async () => {
       try {
-        await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Got it! I will DM you if @VaxHuntersCan mentions your postal code.` })
-        await getRepository(Subscription).update(id, { confirmed: true })
+        await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Got it! I'll DM you if @VaxHuntersCan mentions your postal code 💉\nReply 'unsubscribe' to stop.` })
+        await getRepository(Subscription)
+          .createQueryBuilder()
+          .update()
+          .set({ confirmed: true })
+          .where(`username = :username`, { username })
+          .execute()
       } catch (err) {
         console.error('An error occurred while sending confirmations: %o', err)
       }

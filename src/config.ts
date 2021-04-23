@@ -9,6 +9,8 @@ export const config = {
   // ID for @VaxHuntersCan (via tweeterid.com)
   VAX_HUNTERS_CAN_ID: '1373531468744552448',
   VAX_HUNTERS_CAN_USERNAME: 'VaxHuntersCan',
+
+  // ID for @VaxHunterBot
   VAX_BOT_ID: '1385030381435506688',
 
   // Regexes
@@ -25,4 +27,7 @@ export const config = {
   MENTIONS_FETCH_COUNT: 200,
   MENTIONS_CURSOR_NAME: 'root',
   MENTIONS_POLL_INTERVAL_SECONDS: 30,
+
+  // Blurbs
+  SELF_PROMOTION_BLURB: `I'm a bot. Tweet me your postal code and I'll notify you if @VaxHuntersCan mentions it!`,
 }

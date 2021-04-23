@@ -21,7 +21,7 @@ const main = async () => {
     checkMentionsJob.start()
     console.log('Initialized!')
   } catch (err) {
-    console.error(err)
+    console.error(`An error occurred during initialization: %o`, err)
   }
 }
 
