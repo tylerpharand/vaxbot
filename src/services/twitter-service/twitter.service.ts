@@ -320,7 +320,7 @@ export class TwitterService {
 
     await Promise.all(toConfirm.map(({ id, tweetId, username }) => limit(async () => {
       try {
-        await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Got it! I'll DM you if @VaxHuntersCan mentions your postal code 💉\nReply 'unsubscribe' to stop.` })
+        await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Got it! I'll DM you if @VaxHuntersCan mentions your postal code.\nReply 'unsubscribe' to stop.` })
         await getRepository(Subscription)
           .createQueryBuilder()
           .update()
