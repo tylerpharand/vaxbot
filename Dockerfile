@@ -17,9 +17,11 @@ WORKDIR /usr/src/app
 COPY package.json .
 # Install all Packages
 RUN npm install
+# Install typescript
 # Copy all other source code to work directory
 ADD . /usr/src/app
 # TypeScript
+RUN ls
 RUN ./node_modules/typescript/bin/tsc
 # Start
 CMD [ "npm", "run", "prod" ]
