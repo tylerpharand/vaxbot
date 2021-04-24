@@ -22,6 +22,7 @@ import { botConfig } from '../../config'
 
 const {
   SELF_PROMOTE_ACTIVE,
+  SELF_PROMOTE_ONLY_POSTAL_CODE,
   NOTIFY_USERS_ACTIVE,
   SUBSCRIPTION_CONFIRMATIONS_ACTIVE,
   VAX_HUNTERS_CAN_ID,
@@ -60,6 +61,21 @@ export class TwitterService {
 
     this.stream.on('tweet', async (tweet: Tweet) => {
       this.handleTweet(tweet)
+    })
+    this.stream.on('connect', async () => {
+      console.error(`Received 'connect' event`)
+    })
+    this.stream.on('connected', async () => {
+      console.error(`Received 'connected' event`)
+    })
+    this.stream.on('disconnect', async (disconnectMessage) => {
+      console.error(`Received 'disconnect' event: %o`, disconnectMessage)
+    })
+    this.stream.on('reconnect', function (request, response, connectInterval) {
+      console.error(`Received 'reconnect' event (connectInterval: ${connectInterval})`)
+    })
+    this.stream.on('warning', function (warningMessage) {
+      console.error(`Received 'warning' event: %o`, warningMessage)
     })
   }
 
@@ -170,8 +186,8 @@ export class TwitterService {
         })))
       }
 
-      // Self promote on all tweets
-      await this.selfPromote(tweet)
+      // Self promote on tweets containing postal codes
+      await this.selfPromote(tweet, postalCodes)
     }
   }
 
@@ -184,9 +200,13 @@ export class TwitterService {
    */
   private async selfPromote(
     tweet: Tweet,
+    postalCodes: string[]
   ) {
     try {
       if (SELF_PROMOTE_ACTIVE && tweet.user.id_str === VAX_HUNTERS_CAN_ID) {
+        if (SELF_PROMOTE_ONLY_POSTAL_CODE && postalCodes.length === 0) {
+          return
+        }
         await T.post('statuses/update', { in_reply_to_status_id: tweet.id_str, status: SELF_PROMOTION_BLURB })
       }
     } catch (err) {
@@ -298,7 +318,9 @@ export class TwitterService {
     try {
       console.log(`\tUnsubscribing user ${userId}...`)
       await getRepository(Subscription).delete({ userId })
-      await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Consider it done.` })
+      if (SUBSCRIPTION_CONFIRMATIONS_ACTIVE) {
+        await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Consider it done.` })
+      }
     } catch (err) {
       console.error(`An error occurred while unsubscribing user ${userId}: %o`, err)
     }

@@ -32,6 +32,7 @@ const ORMConfig = {
 const botConfig = {
   // Options
   SELF_PROMOTE_ACTIVE: process.env.NODE_ENV === Environment.production,
+  SELF_PROMOTE_ONLY_POSTAL_CODE: true,
   NOTIFY_USERS_ACTIVE: process.env.NODE_ENV === Environment.production,
   SUBSCRIPTION_CONFIRMATIONS_ACTIVE: process.env.NODE_ENV === Environment.production,
 
@@ -70,7 +71,7 @@ const botConfig = {
   DMS_POLL_INTERVAL_MINUTES: 1,
 
   // Blurbs
-  SELF_PROMOTION_BLURB: `@VaxHuntersCan I'm a bot to help you find vaccine popups. Tweet me your postal code and I'll notify you if VaxHuntersCan mentions it!`,
+  SELF_PROMOTION_BLURB: `@VaxHuntersCan I'm here to help you find vaccine pop-ups. Tweet me your postal code and I'll notify you if @VaxHuntersCan mentions it!`,
 }
 
 export {
