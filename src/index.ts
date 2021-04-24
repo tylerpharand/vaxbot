@@ -5,13 +5,13 @@ import Cron from 'cron'
 import Koa from 'koa'
 import Router from 'koa-router'
 
-import { config } from './config'
+import { botConfig, ORMConfig } from './config'
 import { TwitterService } from './services/twitter-service/twitter.service'
 
 const {
   MENTIONS_POLL_INTERVAL_SECONDS,
   DMS_POLL_INTERVAL_MINUTES,
-} = config
+} = botConfig
 
 const buildServer = () => {
   var server = new Koa()
@@ -33,7 +33,7 @@ const main = async () => {
     const server = buildServer()
     server.listen(3000)
 
-    await createConnection()
+    await createConnection(ORMConfig)
     const twitterService = new TwitterService()
 
     const checkMentionsJob = new Cron.CronJob(`*/${MENTIONS_POLL_INTERVAL_SECONDS} * * * * *`, async () => {

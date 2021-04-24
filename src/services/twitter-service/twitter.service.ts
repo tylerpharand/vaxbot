@@ -18,7 +18,7 @@ import { Tweet } from './types/index'
 import { getRepository, In } from 'typeorm'
 import { Subscription } from '../../entity/Subscription'
 import { MentionsCursor } from '../../entity/MentionsCursor'
-import { config } from '../../config'
+import { botConfig } from '../../config'
 
 const {
   SELF_PROMOTE_ACTIVE,
@@ -41,7 +41,7 @@ const {
   TWITTER_ACCESS_TOKEN_SECRET,
   SELF_PROMOTION_BLURB,
   VAX_BOT_ID,
-} = config
+} = botConfig
 
 var T = new Twit({
   consumer_key: TWITTER_CONSUMER_KEY,
