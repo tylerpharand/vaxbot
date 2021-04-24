@@ -43,7 +43,6 @@ const botConfig = {
 
   // ID for @VaxHuntersCan (via tweeterid.com)
   VAX_HUNTERS_CAN_ID: '1373531468744552448',
-  VAX_HUNTERS_CAN_USERNAME: 'VaxHuntersCan',
 
   // ID for @VaxHunterBot
   VAX_BOT_ID: '1385030381435506688',
@@ -71,7 +70,7 @@ const botConfig = {
   DMS_POLL_INTERVAL_MINUTES: 1,
 
   // Blurbs
-  SELF_PROMOTION_BLURB: `I'm a bot to help you find vaccine popups. Tweet me your postal code and I'll notify you if VaxHuntersCan mentions it!`,
+  SELF_PROMOTION_BLURB: `@VaxHuntersCan I'm a bot to help you find vaccine popups. Tweet me your postal code and I'll notify you if VaxHuntersCan mentions it!`,
 }
 
 export {

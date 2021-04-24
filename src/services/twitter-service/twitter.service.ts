@@ -25,7 +25,6 @@ const {
   NOTIFY_USERS_ACTIVE,
   SUBSCRIPTION_CONFIRMATIONS_ACTIVE,
   VAX_HUNTERS_CAN_ID,
-  VAX_HUNTERS_CAN_USERNAME,
   POSTAL_CODE_REGEX,
   UNSUBSCRIBE_REGEX,
   NOTIFY_USER_CONCURRENCY,
@@ -220,7 +219,7 @@ export class TwitterService {
                 recipient_id: userId,
               },
               message_data: {
-                text: `Hey! @${VAX_HUNTERS_CAN_USERNAME} just tweeted about ${postalCodes.join(', ')}:\nhttps://twitter.com/i/web/status/${tweet.id_str}\n\nTo unsubscribe, mention me in a tweet with the word 'unsubscribe'.`
+                text: `Hey! @VaxHuntersCan just tweeted about ${postalCodes.join(', ')}:\nhttps://twitter.com/i/web/status/${tweet.id_str}\n\nTo unsubscribe, mention me in a tweet with the word 'unsubscribe'.`
               }
             }
           }
