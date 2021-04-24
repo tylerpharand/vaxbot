@@ -68,14 +68,14 @@ jobs:
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
-        task-definition: vaxbot-task-definition.json
-        container-name: vaxbot
+        task-definition: vaxhunterbot-task-definition.json
+        container-name: vaxhunterbot
         image: ${{ steps.build-image.outputs.image }}
 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
-        service: vaxbot-service
-        cluster: vaxbot-cluster
+        service: vaxhunterbot-service
+        cluster: vaxhunterbot-cluster
         wait-for-service-stability: true
