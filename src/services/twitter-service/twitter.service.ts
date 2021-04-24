@@ -16,8 +16,8 @@ import Twit from 'twit'
 import pLimit from 'p-limit'
 import { Tweet } from './types/index'
 import { getRepository, In } from 'typeorm'
-import { Subscription } from '../../entity/Subscription'
-import { MentionsCursor } from '../../entity/MentionsCursor'
+import { Subscription } from '../../entity/Subscription.entity'
+import { MentionsCursor } from '../../entity/MentionsCursor.entity'
 import { botConfig } from '../../config'
 
 const {

@@ -10,14 +10,12 @@ const ORMConfig = {
   synchronize: true,
   logging: false,
   entities: [
-    'src/entity/**/*.ts'
+    `${__dirname }/entity/*.entity.{ts,js}`
   ],
   migrations: [
-    'src/migration/**/*.ts'
+    `${__dirname}/migration/*.migration.{ts,js}`
   ],
-  subscribers: [
-    'src/subscriber/**/*.ts'
-  ],
+  subscribers: [],
   cli: {
     entitiesDir: 'src/entity',
     migrationsDir: 'src/migration',
