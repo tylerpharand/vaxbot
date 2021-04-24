@@ -1,7 +1,9 @@
 require('dotenv').config()
 import 'reflect-metadata'
 import { createConnection } from 'typeorm'
-import * as Cron from 'cron'
+import Cron from 'cron'
+import Koa from 'koa'
+import Router from 'koa-router'
 
 import { config } from './config'
 import { TwitterService } from './services/twitter-service/twitter.service'
@@ -11,8 +13,26 @@ const {
   DMS_POLL_INTERVAL_MINUTES,
 } = config
 
+const buildServer = () => {
+  var server = new Koa()
+  var router = new Router()
+
+  router.get('/healthcheck', (ctx, next) => {
+    ctx.body = `I'm alive`
+  })
+
+  server
+    .use(router.routes())
+    .use(router.allowedMethods())
+
+  return server
+}
+
 const main = async () => {
   try {
+    const server = buildServer()
+    server.listen(3000)
+
     await createConnection()
     const twitterService = new TwitterService()
 
