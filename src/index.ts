@@ -44,8 +44,7 @@ const main = async () => {
       await twitterService.checkMentions()
     })
 
-    const publishMetricsJob = new Cron.CronJob(`*/${5} * * * * *`, async () => {
-    // const publishMetricsJob = new Cron.CronJob(`*/${METRICS_INTERVAL_MINUTES} * * * *`, async () => {
+    const publishMetricsJob = new Cron.CronJob(`*/${METRICS_INTERVAL_MINUTES} * * * *`, async () => {
       console.log('\nChecking metrics...')
       const {
         postalCodeBreakdown,
@@ -55,10 +54,10 @@ const main = async () => {
       console.log(`postalCodeBreakdown: %o`, postalCodeBreakdown)
     })
 
-    const checkDMsJob = new Cron.CronJob(`*/${DMS_POLL_INTERVAL_MINUTES} * * * *`, async () => {
-      console.log('\nChecking DMs...')
-      await twitterService.checkDMs()
-    })
+    // const checkDMsJob = new Cron.CronJob(`*/${DMS_POLL_INTERVAL_MINUTES} * * * *`, async () => {
+    //   console.log('\nChecking DMs...')
+    //   await twitterService.checkDMs()
+    // })
 
     checkMentionsJob.start()
     publishMetricsJob.start()
