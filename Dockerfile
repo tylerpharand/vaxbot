@@ -19,4 +19,4 @@ RUN ls
 RUN ./node_modules/typescript/bin/tsc
 # Start
 CMD [ "npm", "run", "prod" ]
-# EXPOSE 7001
+EXPOSE 3000
