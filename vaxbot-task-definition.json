@@ -1,242 +1,74 @@
 {
-    "family": "",
-    "taskRoleArn": "",
-    "executionRoleArn": "",
-    "networkMode": "bridge",
+    "taskDefinitionArn": "arn:aws:ecs:ca-central-1:959119560109:task-definition/vaxbot-task-definition:1",
     "containerDefinitions": [
         {
-            "name": "",
-            "image": "",
-            "repositoryCredentials": {
-                "credentialsParameter": ""
-            },
-            "cpu": 0,
-            "memory": 0,
-            "memoryReservation": 0,
-            "links": [
-                ""
-            ],
+            "name": "vaxbot",
+            "image": "httpd:2.4",
+            "cpu": 256,
+            "memoryReservation": 512,
+            "links": [],
             "portMappings": [
                 {
-                    "containerPort": 0,
-                    "hostPort": 0,
+                    "containerPort": 80,
+                    "hostPort": 80,
                     "protocol": "tcp"
                 }
             ],
             "essential": true,
             "entryPoint": [
-                ""
+                "sh",
+                "-c"
             ],
             "command": [
-                ""
+                "/bin/sh -c \"echo '<html> <head> <title>Amazon ECS Sample App</title> <style>body {margin-top: 40px; background-color: #333;} </style> </head><body> <div style=color:white;text-align:center> <h1>Amazon ECS Sample App</h1> <h2>Congratulations!</h2> <p>Your application is now running on a container in Amazon ECS.</p> </div></body></html>' >  /usr/local/apache2/htdocs/index.html && httpd-foreground\""
             ],
-            "environment": [
-                {
-                    "name": "",
-                    "value": ""
-                }
-            ],
-            "environmentFiles": [
-                {
-                    "value": "",
-                    "type": "s3"
-                }
-            ],
-            "mountPoints": [
-                {
-                    "sourceVolume": "",
-                    "containerPath": "",
-                    "readOnly": true
-                }
-            ],
-            "volumesFrom": [
-                {
-                    "sourceContainer": "",
-                    "readOnly": true
-                }
-            ],
-            "linuxParameters": {
-                "capabilities": {
-                    "add": [
-                        ""
-                    ],
-                    "drop": [
-                        ""
-                    ]
-                },
-                "devices": [
-                    {
-                        "hostPath": "",
-                        "containerPath": "",
-                        "permissions": [
-                            "read"
-                        ]
-                    }
-                ],
-                "initProcessEnabled": true,
-                "sharedMemorySize": 0,
-                "tmpfs": [
-                    {
-                        "containerPath": "",
-                        "size": 0,
-                        "mountOptions": [
-                            ""
-                        ]
-                    }
-                ],
-                "maxSwap": 0,
-                "swappiness": 0
-            },
-            "secrets": [
-                {
-                    "name": "",
-                    "valueFrom": ""
-                }
-            ],
-            "dependsOn": [
-                {
-                    "containerName": "",
-                    "condition": "SUCCESS"
-                }
-            ],
-            "startTimeout": 0,
-            "stopTimeout": 0,
-            "hostname": "",
-            "user": "",
-            "workingDirectory": "",
-            "disableNetworking": true,
-            "privileged": true,
-            "readonlyRootFilesystem": true,
-            "dnsServers": [
-                ""
-            ],
-            "dnsSearchDomains": [
-                ""
-            ],
-            "extraHosts": [
-                {
-                    "hostname": "",
-                    "ipAddress": ""
-                }
-            ],
-            "dockerSecurityOptions": [
-                ""
-            ],
-            "interactive": true,
-            "pseudoTerminal": true,
-            "dockerLabels": {
-                "KeyName": ""
-            },
-            "ulimits": [
-                {
-                    "name": "rss",
-                    "softLimit": 0,
-                    "hardLimit": 0
-                }
-            ],
+            "environment": [],
+            "mountPoints": [],
+            "volumesFrom": [],
             "logConfiguration": {
-                "logDriver": "splunk",
+                "logDriver": "awslogs",
                 "options": {
-                    "KeyName": ""
-                },
-                "secretOptions": [
-                    {
-                        "name": "",
-                        "valueFrom": ""
-                    }
-                ]
-            },
-            "healthCheck": {
-                "command": [
-                    ""
-                ],
-                "interval": 0,
-                "timeout": 0,
-                "retries": 0,
-                "startPeriod": 0
-            },
-            "systemControls": [
-                {
-                    "namespace": "",
-                    "value": ""
-                }
-            ],
-            "resourceRequirements": [
-                {
-                    "value": "",
-                    "type": "GPU"
-                }
-            ],
-            "firelensConfiguration": {
-                "type": "fluentd",
-                "options": {
-                    "KeyName": ""
+                    "awslogs-group": "/ecs/vaxbot-task-definition",
+                    "awslogs-region": "ca-central-1",
+                    "awslogs-stream-prefix": "ecs"
                 }
             }
         }
     ],
-    "volumes": [
+    "family": "vaxbot-task-definition",
+    "executionRoleArn": "arn:aws:iam::959119560109:role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "revision": 1,
+    "volumes": [],
+    "status": "ACTIVE",
+    "requiresAttributes": [
         {
-            "name": "",
-            "host": {
-                "sourcePath": ""
-            },
-            "dockerVolumeConfiguration": {
-                "scope": "task",
-                "autoprovision": true,
-                "driver": "",
-                "driverOpts": {
-                    "KeyName": ""
-                },
-                "labels": {
-                    "KeyName": ""
-                }
-            },
-            "efsVolumeConfiguration": {
-                "fileSystemId": "",
-                "rootDirectory": "",
-                "transitEncryption": "DISABLED",
-                "transitEncryptionPort": 0,
-                "authorizationConfig": {
-                    "accessPointId": "",
-                    "iam": "ENABLED"
-                }
-            }
+            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
+        },
+        {
+            "name": "ecs.capability.execution-role-awslogs"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.21"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
+        },
+        {
+            "name": "ecs.capability.task-eni"
         }
     ],
-    "placementConstraints": [
-        {
-            "type": "memberOf",
-            "expression": ""
-        }
+    "placementConstraints": [],
+    "compatibilities": [
+        "EC2",
+        "FARGATE"
     ],
     "requiresCompatibilities": [
         "FARGATE"
     ],
-    "cpu": "",
-    "memory": "",
-    "tags": [
-        {
-            "key": "",
-            "value": ""
-        }
-    ],
-    "pidMode": "task",
-    "ipcMode": "task",
-    "proxyConfiguration": {
-        "type": "APPMESH",
-        "containerName": "",
-        "properties": [
-            {
-                "name": "",
-                "value": ""
-            }
-        ]
-    },
-    "inferenceAccelerators": [
-        {
-            "deviceName": "",
-            "deviceType": ""
-        }
-    ]
+    "cpu": "256",
+    "memory": "512"
 }
