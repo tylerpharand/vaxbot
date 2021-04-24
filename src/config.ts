@@ -31,7 +31,7 @@ const ORMConfig = {
 
 const botConfig = {
   // Options
-  SELF_PROMOTE_ACTIVE: process.env.NODE_ENV === Environment.production,
+  SELF_PROMOTE_ACTIVE: false,
   SELF_PROMOTE_ONLY_POSTAL_CODE: true,
   NOTIFY_USERS_ACTIVE: process.env.NODE_ENV === Environment.production,
   SUBSCRIPTION_CONFIRMATIONS_ACTIVE: process.env.NODE_ENV === Environment.production,
