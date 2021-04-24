@@ -2,8 +2,8 @@ import { ConnectionOptions } from 'typeorm'
 
 const ORMConfig = {
   type: 'postgres',
-  host: 'localhost',
-  port: 5432,
+  host: process.env.POSTGRES_HOST,
+  port: parseInt(process.env.POSTGRES_PORT),
   username: process.env.POSTGRES_USERNAME,
   password: process.env.POSTGRES_PASSWORD,
   database: process.env.POSTGRES_DATABASE,
