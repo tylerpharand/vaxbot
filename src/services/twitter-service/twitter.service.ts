@@ -145,8 +145,7 @@ export class TwitterService {
   private async handleTweet(
     tweet: Tweet
   ) {
-    // TODO(tyler): Remove `|| true` when ready.
-    if ((tweet.user.id_str === VAX_HUNTERS_CAN_ID || true) && tweet.in_reply_to_user_id_str === null) {
+    if ((tweet.user.id_str === VAX_HUNTERS_CAN_ID) && tweet.in_reply_to_user_id_str === null) {
       console.log('\nReceived tweet: %o', tweet.text)
       const cleanedText = tweet.text.replace(/http\S+/, '')
       const postalCodes = _.chain([...(cleanedText as any).matchAll(POSTAL_CODE_REGEX)])

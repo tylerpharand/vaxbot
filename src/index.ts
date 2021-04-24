@@ -7,9 +7,11 @@ import Router from 'koa-router'
 
 import { botConfig, ORMConfig } from './config'
 import { TwitterService } from './services/twitter-service/twitter.service'
+import { MetricsService } from './services/metrics-service/metrics.service'
 
 const {
   MENTIONS_POLL_INTERVAL_SECONDS,
+  METRICS_INTERVAL_MINUTES,
   DMS_POLL_INTERVAL_MINUTES,
 } = botConfig
 
@@ -35,10 +37,22 @@ const main = async () => {
 
     await createConnection(ORMConfig)
     const twitterService = new TwitterService()
+    const metricsService = new MetricsService()
 
     const checkMentionsJob = new Cron.CronJob(`*/${MENTIONS_POLL_INTERVAL_SECONDS} * * * * *`, async () => {
       console.log('\nChecking mentions...')
       await twitterService.checkMentions()
+    })
+
+    const publishMetricsJob = new Cron.CronJob(`*/${5} * * * * *`, async () => {
+    // const publishMetricsJob = new Cron.CronJob(`*/${METRICS_INTERVAL_MINUTES} * * * *`, async () => {
+      console.log('\nChecking metrics...')
+      const {
+        postalCodeBreakdown,
+        totalSubscriptions
+      } = await metricsService.checkMetrics()
+      console.log(`Total subscriptions: ${totalSubscriptions}`)
+      console.log(`postalCodeBreakdown: %o`, postalCodeBreakdown)
     })
 
     const checkDMsJob = new Cron.CronJob(`*/${DMS_POLL_INTERVAL_MINUTES} * * * *`, async () => {
@@ -47,6 +61,7 @@ const main = async () => {
     })
 
     checkMentionsJob.start()
+    publishMetricsJob.start()
     // TODO(tyler): Possibly implement DM parsing in the future...
     // checkDMsJob.start()
     console.log('Initialized!')

@@ -1,5 +1,10 @@
 import { ConnectionOptions } from 'typeorm'
 
+enum Environment {
+  development = 'development',
+  production = 'production',
+}
+
 const ORMConfig = {
   type: 'postgres',
   host: process.env.POSTGRES_HOST,
@@ -26,10 +31,9 @@ const ORMConfig = {
 
 const botConfig = {
   // Options
-  // TODO(tyler): Turn this on when you're ready...
-  SELF_PROMOTE_ACTIVE: false,
-  NOTIFY_USERS_ACTIVE: true,
-  SUBSCRIPTION_CONFIRMATIONS_ACTIVE: true,
+  SELF_PROMOTE_ACTIVE: process.env.NODE_ENV === Environment.production,
+  NOTIFY_USERS_ACTIVE: process.env.NODE_ENV === Environment.production,
+  SUBSCRIPTION_CONFIRMATIONS_ACTIVE: process.env.NODE_ENV === Environment.production,
 
   // Credentials
   TWITTER_CONSUMER_KEY: process.env.TWITTER_CONSUMER_KEY,
@@ -54,6 +58,9 @@ const botConfig = {
   PROCESS_MENTIONS_CONCURRENCY: 2,
   SUBSCRIPTION_CONFIRMATION_CONCURRENCY: 2,
 
+  // Metrics
+  METRICS_INTERVAL_MINUTES: 60,
+
   // Misc
   MENTIONS_FETCH_COUNT: 200,
   MENTIONS_CURSOR_NAME: 'root',
@@ -64,7 +71,7 @@ const botConfig = {
   DMS_POLL_INTERVAL_MINUTES: 1,
 
   // Blurbs
-  SELF_PROMOTION_BLURB: `I'm a bot. Tweet me your postal code and I'll notify you if VaxHuntersCan mentions it!`,
+  SELF_PROMOTION_BLURB: `I'm a bot to help you find vaccine popups. Tweet me your postal code and I'll notify you if VaxHuntersCan mentions it!`,
 }
 
 export {
