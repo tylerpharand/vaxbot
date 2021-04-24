@@ -239,7 +239,7 @@ export class TwitterService {
                 recipient_id: userId,
               },
               message_data: {
-                text: `Hey! @VaxHuntersCan just tweeted about ${postalCodes.join(', ')}:\nhttps://twitter.com/i/web/status/${tweet.id_str}\n\nTo unsubscribe, mention me in a tweet with the word 'unsubscribe'.`
+                text: `Hey! VaxHuntersCan just tweeted about ${postalCodes.join(', ')}:\nhttps://twitter.com/i/web/status/${tweet.id_str}\n\nTo unsubscribe, mention me in a tweet with the word 'unsubscribe'.`
               }
             }
           }
@@ -386,7 +386,7 @@ export class TwitterService {
     await Promise.all(toConfirm.map(({ id, tweetId, username }) => limit(async () => {
       try {
         if (SUBSCRIPTION_CONFIRMATIONS_ACTIVE) {
-          await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Got it! I'll DM you if @VaxHuntersCan mentions your postal code.\n\nReply 'unsubscribe' to stop.` })
+          await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Got it! I'll DM you if VaxHuntersCan mentions your postal code.\n\nReply 'unsubscribe' to stop.` })
         }
         await getRepository(Subscription)
           .createQueryBuilder()
