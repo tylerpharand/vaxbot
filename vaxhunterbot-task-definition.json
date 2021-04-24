@@ -2,7 +2,7 @@
     "taskDefinitionArn": "arn:aws:ecs:ca-central-1:959119560109:task-definition/vaxbot-task-definition:1",
     "containerDefinitions": [
         {
-            "name": "vaxbot",
+            "name": "vaxhunterbot",
             "image": "httpd:2.4",
             "cpu": 256,
             "memoryReservation": 512,
