@@ -1,3 +1,4 @@
+import _ from 'lodash'
 import { getRepository } from 'typeorm'
 import { Subscription } from '../../entity/Subscription.entity'
 
@@ -13,6 +14,7 @@ export class MetricsService {
     public async checkMetrics() {
         const totalSubscriptions = await getRepository(Subscription).count()
 
+        // The returned keys lose their camelCase
         const postalCodeBreakdown = await getRepository(Subscription)
             .createQueryBuilder('subscription')
             .select("subscription.postalCode AS postalCode")
@@ -22,7 +24,7 @@ export class MetricsService {
 
         return {
             totalSubscriptions,
-            postalCodeBreakdown
+            postalCodeBreakdown: _.sortBy(postalCodeBreakdown, 'postalcode'),
         }
     }
 }
