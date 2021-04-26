@@ -356,6 +356,8 @@ export class TwitterService {
    * Unsubscribes users from all subscriptions. This can be initiated either from
    * a mention a or Direct Message.
    * 
+   * This method DOES notify the user
+   * 
    * @param userId 
    * @returns 
    */
@@ -380,6 +382,8 @@ export class TwitterService {
    *
    * Creates subscriptions for a user to the specified postal codes. This can be
    * initiated from a mention.
+   * 
+   * This method DOES NOT notify the user (see `sendSubscriptionConfirmations`)
    *
    * @param userId
    * @returns

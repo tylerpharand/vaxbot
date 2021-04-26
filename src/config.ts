@@ -31,13 +31,11 @@ const ORMConfig = {
 
 const botConfig = {
   // Subscription notifications
-  // NOTIFY_USERS_ACTIVE: process.env.NODE_ENV === Environment.production, // This is important...
-  NOTIFY_USERS_ACTIVE: false, // This is important...
+  NOTIFY_USERS_ACTIVE: process.env.NODE_ENV === Environment.production, // This is most important...
   
   // Subscription confirmations
-  // SUBSCRIPTION_CONFIRMATIONS_ACTIVE: process.env.NODE_ENV === Environment.production,
-  SUBSCRIPTION_CONFIRMATIONS_ACTIVE: false,
-  NOTIFY_SUBSCRIPTION_CONFIRMATIONS: false, // TODO: Enable this again
+  SUBSCRIPTION_CONFIRMATIONS_ACTIVE: process.env.NODE_ENV === Environment.production,
+  NOTIFY_SUBSCRIPTION_CONFIRMATIONS: process.env.NODE_ENV === Environment.production,
 
   // Self promotion
   SELF_PROMOTE_ACTIVE: false, // Disables all self-promotion
