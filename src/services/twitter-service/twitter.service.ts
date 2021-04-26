@@ -25,6 +25,7 @@ const {
   SELF_PROMOTE_ONLY_POSTAL_CODE,
   NOTIFY_USERS_ACTIVE,
   SUBSCRIPTION_CONFIRMATIONS_ACTIVE,
+  NOTIFY_SUBSCRIPTION_CONFIRMATIONS,
   VAX_HUNTERS_CAN_ID,
   POSTAL_CODE_REGEX,
   UNSUBSCRIBE_REGEX,
@@ -56,27 +57,29 @@ export class TwitterService {
   subscriptionStream: Twit.Stream
 
   constructor() {
-    this.stream = T.stream('statuses/filter', { follow: [VAX_HUNTERS_CAN_ID] })
-    console.log(`Listening for tweet updates from user ${VAX_HUNTERS_CAN_ID}`)
+    if (NOTIFY_USERS_ACTIVE) {
+      console.log(`Listening for tweet updates from user ${VAX_HUNTERS_CAN_ID}`)
 
-    this.stream.on('tweet', async (tweet: Tweet) => {
-      this.handleTweet(tweet)
-    })
-    this.stream.on('connect', async () => {
-      console.error(`Received 'connect' event`)
-    })
-    this.stream.on('connected', async () => {
-      console.error(`Received 'connected' event`)
-    })
-    this.stream.on('disconnect', async (disconnectMessage) => {
-      console.error(`Received 'disconnect' event: %o`, disconnectMessage)
-    })
-    this.stream.on('reconnect', function (request, response, connectInterval) {
-      console.error(`Received 'reconnect' event (connectInterval: ${connectInterval})`)
-    })
-    this.stream.on('warning', function (warningMessage) {
-      console.error(`Received 'warning' event: %o`, warningMessage)
-    })
+      this.stream = T.stream('statuses/filter', { follow: [VAX_HUNTERS_CAN_ID] })
+      this.stream.on('tweet', async (tweet: Tweet) => {
+        this.handleTweet(tweet)
+      })
+      this.stream.on('connect', async () => {
+        console.error(`Received 'connect' event`)
+      })
+      this.stream.on('connected', async () => {
+        console.error(`Received 'connected' event`)
+      })
+      this.stream.on('disconnect', async (disconnectMessage) => {
+        console.error(`Received 'disconnect' event: %o`, disconnectMessage)
+      })
+      this.stream.on('reconnect', function (request, response, connectInterval) {
+        console.error(`Received 'reconnect' event (connectInterval: ${connectInterval})`)
+      })
+      this.stream.on('warning', function (warningMessage) {
+        console.error(`Received 'warning' event: %o`, warningMessage)
+      })
+    }
   }
 
 
@@ -104,7 +107,7 @@ export class TwitterService {
       const remainingSeconds = parseInt(res.resp.headers['x-rate-limit-reset'] as string, 10) - Math.floor(new Date().getTime() / 1000)
       const remainingMinutes = Number.parseFloat(String(remainingSeconds / 60)).toFixed(2)
       console.log(`(Mentions) Remaining calls: ${remainingCalls} - More juice in ${remainingMinutes} mins`)
-      
+
       const mentions = res.data as unknown as Tweet[]
       mentions.reverse()
       await this.handleMentions(mentions)
@@ -116,7 +119,7 @@ export class TwitterService {
 
   public async checkDMs() {
     try {
-      const directMessageCursor = '' || { cursor: ''}
+      const directMessageCursor = '' || { cursor: '' }
       const args = {
         count: DM_FETCH_COUNT,
       }
@@ -160,34 +163,38 @@ export class TwitterService {
   private async handleTweet(
     tweet: Tweet
   ) {
-    if ((tweet.user.id_str === VAX_HUNTERS_CAN_ID) && tweet.in_reply_to_user_id_str === null) {
-      console.log('\nReceived tweet: %o', tweet.text)
-      const cleanedText = tweet.text.replace(/http\S+/, '')
-      const postalCodes = _.chain([...(cleanedText as any).matchAll(POSTAL_CODE_REGEX)])
+    try {
+      if ((tweet.user.id_str === VAX_HUNTERS_CAN_ID) && tweet.in_reply_to_user_id_str === null) {
+        console.log('\nReceived tweet: %o', tweet.text)
+        const cleanedText = tweet.text.replace(/http\S+/, '')
+        const postalCodes = _.chain([...(cleanedText as any).matchAll(POSTAL_CODE_REGEX)])
           .map((match) => match[0].toUpperCase())
           .uniq()
           .value()
 
-      if (postalCodes.length > 0) {
-        console.log('Matched postal codes: %o', postalCodes)
+        if (postalCodes.length > 0) {
+          console.log('Matched postal codes: %o', postalCodes)
 
-        // TODO(tyler): The distinct userId could be handled by postgres
-        const subscriptions = await getRepository(Subscription)
-          .find({
-            where: { postalCode: In(postalCodes) },
-          })
-        const users = _.uniqBy(subscriptions, 'userId')
+          // TODO(tyler): The distinct userId could be handled by postgres
+          const subscriptions = await getRepository(Subscription)
+            .find({
+              where: { postalCode: In(postalCodes) },
+            })
+          const users = _.uniqBy(subscriptions, 'userId')
 
-        console.log(`Notifying ${users.length} users...`)
-        const limit = pLimit(NOTIFY_USER_CONCURRENCY)
-        await Promise.all(users.map(user => limit(async () => {
-          await this.notifyUser(user.userId, postalCodes, tweet)
-            .catch((err) => console.error(`An error occurred while notifying user ${user.userId}: %o`, err))
-        })))
+          console.log(`Notifying ${users.length} users...`)
+          const limit = pLimit(NOTIFY_USER_CONCURRENCY)
+          await Promise.all(users.map(user => limit(async () => {
+            await this.notifyUser(user.userId, postalCodes, tweet)
+              .catch((err) => console.error(`An error occurred while notifying user ${user.userId}: %o`, err))
+          })))
+        }
+
+        // Self promote on tweets containing postal codes
+        await this.selfPromote(tweet, postalCodes)
       }
-
-      // Self promote on tweets containing postal codes
-      await this.selfPromote(tweet, postalCodes)
+    } catch (err) {
+      console.error(`An error occurred while handling tweet: %o`, err)
     }
   }
 
@@ -204,9 +211,9 @@ export class TwitterService {
   ) {
     try {
       if (SELF_PROMOTE_ACTIVE && tweet.user.id_str === VAX_HUNTERS_CAN_ID) {
-        if (SELF_PROMOTE_ONLY_POSTAL_CODE && postalCodes.length === 0) {
-          return
-        }
+        // Guard if only promoting tweets containing postal codes
+        if (SELF_PROMOTE_ONLY_POSTAL_CODE && postalCodes.length === 0) return
+
         await T.post('statuses/update', { in_reply_to_status_id: tweet.id_str, status: SELF_PROMOTION_BLURB })
       }
     } catch (err) {
@@ -230,6 +237,7 @@ export class TwitterService {
     tweet: Tweet
   ) {
     try {
+      console.log(`Notifying user ${userId} of tweet ${tweet.id_str} about postal codes ${postalCodes.join(', ')}`)
       if (NOTIFY_USERS_ACTIVE) {
         await T.post('direct_messages/events/new', {
           event: {
@@ -261,44 +269,48 @@ export class TwitterService {
   private async handleMentions(
     mentions: Tweet[]
   ) {
-    // Do nothing
-    if (mentions.length === 0) {
-      console.log(`No pending mentions`)
-      return
-    }
-
-    // Process pending mentions
-    console.log(`Processing ${mentions.length} mentions...`)
-    const limit = pLimit(PROCESS_MENTIONS_CONCURRENCY)
-    await Promise.all(mentions.map(tweet => limit(async () => {
-      try {
-        console.log(`\nProcessing mention (${tweet.id_str}): %o`, tweet.text)
-        const cleanedText = tweet.text.replace(/http\S+/, '')
-        const postalCodes = _.chain([...(cleanedText as any).matchAll(POSTAL_CODE_REGEX)])
-          .map((match) => match[0].toUpperCase())
-          .uniq()
-          .value()
-
-        // Ignore tweets from @VaxHunterBot
-        if (tweet.user.id_str === VAX_BOT_ID) return
-
-        if (UNSUBSCRIBE_REGEX.test(cleanedText)) {
-          await this.unsubscribeUser(tweet.user.id_str, tweet.id_str, tweet.user.screen_name)
-        } else if (postalCodes.length > 0) {
-          await this.subscribeUser(tweet.user.id_str, tweet.user.screen_name, tweet.id_str, postalCodes)
-        }
-      } catch (err) {
-        console.error(`An error occurred while handling a subscription change: %o`, err)
+    try {
+      // Do nothing
+      if (mentions.length === 0) {
+        console.log(`No pending mentions`)
+        return
       }
-    })))
 
-    // Update cursor in db...
-    const cursor = mentions[mentions.length - 1].id_str
-    console.log(`\nUpdating cursor to ${cursor}`)
-    await getRepository(MentionsCursor).save({
-      name: MENTIONS_CURSOR_NAME,
-      cursor,
-    })
+      // Process pending mentions
+      console.log(`Processing ${mentions.length} mentions...`)
+      const limit = pLimit(PROCESS_MENTIONS_CONCURRENCY)
+      await Promise.all(mentions.map(tweet => limit(async () => {
+        try {
+          console.log(`\nProcessing mention (${tweet.id_str}): %o`, tweet.text)
+          const cleanedText = tweet.text.replace(/http\S+/, '')
+          const postalCodes = _.chain([...(cleanedText as any).matchAll(POSTAL_CODE_REGEX)])
+            .map((match) => match[0].toUpperCase())
+            .uniq()
+            .value()
+
+          // Ignore tweets from @VaxHunterBot
+          if (tweet.user.id_str === VAX_BOT_ID) return
+
+          if (UNSUBSCRIBE_REGEX.test(cleanedText)) {
+            await this.unsubscribeUser(tweet.user.id_str, tweet.id_str, tweet.user.screen_name)
+          } else if (postalCodes.length > 0) {
+            await this.subscribeUser(tweet.user.id_str, tweet.user.screen_name, tweet.id_str, postalCodes)
+          }
+        } catch (err) {
+          console.error(`An error occurred while handling a subscription change: %o`, err)
+        }
+      })))
+
+      // Update cursor in db...
+      const cursor = mentions[mentions.length - 1].id_str
+      console.log(`\nUpdating cursor to ${cursor}`)
+      await getRepository(MentionsCursor).save({
+        name: MENTIONS_CURSOR_NAME,
+        cursor,
+      })
+    } catch (err) {
+      console.error(`An error occurred while handling mentions: %o`, err)
+    }
   }
 
 
@@ -351,16 +363,16 @@ export class TwitterService {
       return await Promise.all(
         newPostalCodes.map(postalCode => limit(
           async () => getRepository(Subscription)
-          .save({
-            userId,
-            username,
-            postalCode,
-            tweetId,
-            confirmed: false,
-          })
-          .catch((err) => {
-            console.error(`An error occurred while subscribing user ${userId} to their postal codes ${postalCodes.toString()}: %o`, err)
-          })
+            .save({
+              userId,
+              username,
+              postalCode,
+              tweetId,
+              confirmed: false,
+            })
+            .catch((err) => {
+              console.error(`An error occurred while subscribing user ${userId} to their postal codes ${postalCodes.toString()}: %o`, err)
+            })
         ))
       )
     } catch (err) {
@@ -376,27 +388,29 @@ export class TwitterService {
    * 
    */
   private async sendSubscriptionConfirmations() {
-    const limit = pLimit(SUBSCRIPTION_CONFIRMATION_CONCURRENCY)
-    const toConfirm = await getRepository(Subscription)
-      .createQueryBuilder('subscription')
-      .where('subscription.confirmed = :confirmed', { confirmed: false })
-      .distinctOn(['subscription.tweetId'])
-      .getMany()
+    if (SUBSCRIPTION_CONFIRMATIONS_ACTIVE) {
+      const limit = pLimit(SUBSCRIPTION_CONFIRMATION_CONCURRENCY)
+      const toConfirm = await getRepository(Subscription)
+        .createQueryBuilder('subscription')
+        .where('subscription.confirmed = :confirmed', { confirmed: false })
+        .distinctOn(['subscription.tweetId'])
+        .getMany()
 
-    await Promise.all(toConfirm.map(({ id, tweetId, username }) => limit(async () => {
-      try {
-        if (SUBSCRIPTION_CONFIRMATIONS_ACTIVE) {
-          await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Got it! I'll DM you if VaxHuntersCan mentions your postal code.\n\nReply 'unsubscribe' to stop.` })
+      await Promise.all(toConfirm.map(({ id, tweetId, username }) => limit(async () => {
+        try {
+          if (NOTIFY_SUBSCRIPTION_CONFIRMATIONS) {
+            await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Got it! I'll DM you if VaxHuntersCan mentions your postal code.\n\nReply 'unsubscribe' to stop.` })
+          }
+          await getRepository(Subscription)
+            .createQueryBuilder()
+            .update()
+            .set({ confirmed: true })
+            .where(`username = :username`, { username })
+            .execute()
+        } catch (err) {
+          console.error('An error occurred while sending confirmations: %o', err)
         }
-        await getRepository(Subscription)
-          .createQueryBuilder()
-          .update()
-          .set({ confirmed: true })
-          .where(`username = :username`, { username })
-          .execute()
-      } catch (err) {
-        console.error('An error occurred while sending confirmations: %o', err)
-      }
-    })))
+      })))
+    }
   }
 }

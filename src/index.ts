@@ -40,18 +40,26 @@ const main = async () => {
     const metricsService = new MetricsService()
 
     const checkMentionsJob = new Cron.CronJob(`*/${MENTIONS_POLL_INTERVAL_SECONDS} * * * * *`, async () => {
-      console.log('\nChecking mentions...')
-      await twitterService.checkMentions()
+      try {
+        console.log('\nChecking mentions...')
+        await twitterService.checkMentions()
+      } catch (err) {
+        console.error(`An error occurred while checking mentions: %o`, err)
+      }
     })
 
     const publishMetricsJob = new Cron.CronJob(`*/${METRICS_INTERVAL_MINUTES} * * * *`, async () => {
-      console.log('\nChecking metrics...')
-      const {
-        postalCodeBreakdown,
-        totalSubscriptions
-      } = await metricsService.checkMetrics()
-      console.log(`Total subscriptions: ${totalSubscriptions}`)
-      console.log(`postalCodeBreakdown: %o`, postalCodeBreakdown)
+      try {
+        console.log('\nChecking metrics...')
+        const {
+          postalCodeBreakdown,
+          totalSubscriptions
+        } = await metricsService.checkMetrics()
+        console.log(`Total subscriptions: ${totalSubscriptions}`)
+        console.log(`postalCodeBreakdown: %o`, postalCodeBreakdown)
+      } catch (err) {
+        console.error(`An error occurred while publishing metrics: %o`, err)
+      }
     })
 
     // const checkDMsJob = new Cron.CronJob(`*/${DMS_POLL_INTERVAL_MINUTES} * * * *`, async () => {

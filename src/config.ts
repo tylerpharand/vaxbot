@@ -30,11 +30,16 @@ const ORMConfig = {
 
 
 const botConfig = {
-  // Options
-  SELF_PROMOTE_ACTIVE: false,
-  SELF_PROMOTE_ONLY_POSTAL_CODE: true,
-  NOTIFY_USERS_ACTIVE: process.env.NODE_ENV === Environment.production,
+  // Subscription notifications
+  NOTIFY_USERS_ACTIVE: process.env.NODE_ENV === Environment.production, // This is important...
+  
+  // Subscription confirmations
   SUBSCRIPTION_CONFIRMATIONS_ACTIVE: process.env.NODE_ENV === Environment.production,
+  NOTIFY_SUBSCRIPTION_CONFIRMATIONS: false, // TODO: Enable this again
+
+  // Self promotion
+  SELF_PROMOTE_ACTIVE: false, // Disables all self-promotion
+  SELF_PROMOTE_ONLY_POSTAL_CODE: true,
 
   // Credentials
   TWITTER_CONSUMER_KEY: process.env.TWITTER_CONSUMER_KEY,
