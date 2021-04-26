@@ -51,6 +51,26 @@ var T = new Twit({
   access_token_secret: TWITTER_ACCESS_TOKEN_SECRET,
 })
 
+const CONFIRMATION_PHRASES = [
+  'Got it',
+  'Done',
+  'Sure thing',
+  'For sure',
+  'Deal',
+  'On it',
+  'Understood',
+  'Consider it done',
+]
+
+const ATTENTION_GRABBING_PHRASES = [
+  'Hey',
+  'Hi',
+  'Ayo',
+  'Hello',
+  'Yo',
+  'Greetings',
+]
+
 export class TwitterService {
 
   stream: Twit.Stream
@@ -80,6 +100,23 @@ export class TwitterService {
         console.error(`Received 'warning' event: %o`, warningMessage)
       })
     }
+  }
+
+  public async testDirectMessageToSelf() {
+    console.log(`Testing direct message to @vaxhunterbot (${VAX_BOT_ID})...`)
+    await T.post('direct_messages/events/new', {
+      event: {
+        type: "message_create",
+        message_create: {
+          target: {
+            recipient_id: VAX_BOT_ID,
+          },
+          message_data: {
+            text: `${_.sample(ATTENTION_GRABBING_PHRASES)}! Test message\n\nTo unsubscribe, mention me in a tweet with the word 'unsubscribe'.`
+          }
+        }
+      }
+    } as any)
   }
 
 
@@ -247,7 +284,7 @@ export class TwitterService {
                 recipient_id: userId,
               },
               message_data: {
-                text: `Hey! VaxHuntersCan just tweeted about ${postalCodes.join(', ')}:\nhttps://twitter.com/i/web/status/${tweet.id_str}\n\nTo unsubscribe, mention me in a tweet with the word 'unsubscribe'.`
+                text: `${_.sample(ATTENTION_GRABBING_PHRASES)}! VaxHuntersCan just tweeted about ${postalCodes.join(', ')}:\nhttps://twitter.com/i/web/status/${tweet.id_str}\n\nTo unsubscribe, mention me in a tweet with the word 'unsubscribe'.`
               }
             }
           }
@@ -331,7 +368,7 @@ export class TwitterService {
       console.log(`\tUnsubscribing user ${userId}...`)
       await getRepository(Subscription).delete({ userId })
       if (SUBSCRIPTION_CONFIRMATIONS_ACTIVE) {
-        await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Consider it done.` })
+        await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} ${_.sample(CONFIRMATION_PHRASES)}.` })
       }
     } catch (err) {
       console.error(`An error occurred while unsubscribing user ${userId}: %o`, err)
@@ -399,7 +436,7 @@ export class TwitterService {
       await Promise.all(toConfirm.map(({ id, tweetId, username }) => limit(async () => {
         try {
           if (NOTIFY_SUBSCRIPTION_CONFIRMATIONS) {
-            await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} Got it! I'll DM you if VaxHuntersCan mentions your postal code.\n\nReply 'unsubscribe' to stop.` })
+            await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} ${_.sample(CONFIRMATION_PHRASES)}! I'll DM you if VaxHuntersCan mentions your postal code.\n\nReply 'unsubscribe' to stop.` })
           }
           await getRepository(Subscription)
             .createQueryBuilder()

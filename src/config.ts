@@ -78,7 +78,7 @@ const botConfig = {
   DMS_POLL_INTERVAL_MINUTES: 1,
 
   // Blurbs
-  SELF_PROMOTION_BLURB: `@VaxHuntersCan I'm here to help you find vaccine pop-ups. Tweet me your postal code and I'll notify you if @VaxHuntersCan mentions it!`,
+  SELF_PROMOTION_BLURB: `@VaxHuntersCan I'm here to help you find vaccine pop-ups. Tweet me your postal code and I'll notify you if VaxHuntersCan mentions it!`,
 }
 
 export {
