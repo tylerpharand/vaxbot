@@ -99,6 +99,9 @@ export class TwitterService {
       this.stream.on('warning', function (warningMessage) {
         console.error(`Received 'warning' event: %o`, warningMessage)
       })
+      this.stream.on('direct_message', function (directMsg) {
+        console.log(`Received direct message: %o`, directMsg)
+      })
     }
   }
 
