@@ -443,7 +443,7 @@ export class TwitterService {
       await Promise.all(toConfirm.map(({ id, tweetId, username }) => limit(async () => {
         try {
           if (NOTIFY_SUBSCRIPTION_CONFIRMATIONS) {
-            await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} ${_.sample(CONFIRMATION_PHRASES)}! Follow me and I'll DM you if VaxHuntersCan mentions your postal code.\n\nReply 'unsubscribe' to stop.` })
+            await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} ${_.sample(CONFIRMATION_PHRASES)}! I'll DM you if VaxHuntersCan mentions your postal code. I will only be able to send you notifications if you are following me!\n\nReply 'unsubscribe' to stop.` })
           }
           await getRepository(Subscription)
             .createQueryBuilder()
