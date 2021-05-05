@@ -55,7 +55,7 @@ const botConfig = {
 
   // Regexes
   POSTAL_CODE_REGEX: /[A-Za-z]\d[A-Za-z]/g,
-  UNSUBSCRIBE_REGEX: /unsubscribe/gi,
+  UNSUBSCRIBE_REGEX: /unsubscribe/i,
 
   // Concurrencies
   NOTIFY_USER_CONCURRENCY: 2,
