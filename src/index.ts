@@ -41,7 +41,6 @@ const main = async () => {
 
     const checkMentionsJob = new Cron.CronJob(`*/${MENTIONS_POLL_INTERVAL_SECONDS} * * * * *`, async () => {
       try {
-        console.log('\nChecking mentions...')
         await twitterService.checkMentions()
       } catch (err) {
         console.error(`An error occurred while checking mentions: %o`, err)

@@ -312,7 +312,6 @@ export class TwitterService {
     try {
       // Do nothing
       if (mentions.length === 0) {
-        console.log(`No pending mentions`)
         return
       }
 
