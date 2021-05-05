@@ -22,9 +22,17 @@ export class MetricsService {
             .groupBy("subscription.postalCode")
             .getRawMany();
 
-        return {
-            totalSubscriptions,
-            postalCodeBreakdown: _.sortBy(postalCodeBreakdown, 'postalcode'),
-        }
+        const top10 = _.chain(postalCodeBreakdown)
+            .map(i => ({
+                ...i,
+                count: parseInt(i.count),
+            }))
+            .sortBy('count')
+            .reverse()
+            .take(10)
+            .value()
+
+        console.log(`Total subscriptions: ${totalSubscriptions}`)
+        console.log(`Top 10 postal codes: %o`, top10)
     }
 }

@@ -51,12 +51,7 @@ const main = async () => {
     const publishMetricsJob = new Cron.CronJob(`*/${METRICS_INTERVAL_MINUTES} * * * *`, async () => {
       try {
         console.log('\nChecking metrics...')
-        const {
-          postalCodeBreakdown,
-          totalSubscriptions
-        } = await metricsService.checkMetrics()
-        console.log(`Total subscriptions: ${totalSubscriptions}`)
-        console.log(`postalCodeBreakdown: %o`, postalCodeBreakdown)
+        await metricsService.checkMetrics()
       } catch (err) {
         console.error(`An error occurred while publishing metrics: %o`, err)
       }
