@@ -52,12 +52,12 @@ var T = new Twit({
 })
 
 const CONFIRMATION_PHRASES = [
+  'Aye aye',
   'Got it',
+  'For sure',
   'Done',
   'Sure thing',
-  'For sure',
-  'Deal',
-  'On it',
+  'Will do',
   'Understood',
   'Consider it done',
 ]
@@ -373,7 +373,7 @@ export class TwitterService {
       console.log(`\tUnsubscribing user ${userId}...`)
       await getRepository(Subscription).delete({ userId })
       if (SUBSCRIPTION_CONFIRMATIONS_ACTIVE) {
-        await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} ${_.sample(CONFIRMATION_PHRASES)}.` })
+        await T.post('statuses/update', { in_reply_to_status_id: tweetId, status: `@${username} ${_.sample(CONFIRMATION_PHRASES)}!` })
       }
     } catch (err) {
       console.error(`An error occurred while unsubscribing user ${userId}: %o`, err)
